@@ -1,0 +1,942 @@
+
+src/index.css
+src/App.tsx
+import { useState, useEffect, useRef } from "react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  badge?: "new" | "sale" | "hot";
+  rating: number;
+  reviews: number;
+  inStock: boolean;
+  description: string;
+  specs: string[];
+}
+
+interface CartItem extends Product {
+  quantity: number;
+}
+
+// ─── Admin password (change this to whatever you want) ───────────────────────
+const ADMIN_PASSWORD = "mobileking786";
+
+// ─── Initial Product Data ─────────────────────────────────────────────────────
+const INITIAL_PRODUCTS: Product[] = [
+  {
+    id: 1,
+    name: "iPhone 15 Pro Magsafe Case",
+    category: "Cases",
+    price: 1850,
+    originalPrice: 2500,
+    image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop&auto=format",
+    badge: "sale",
+    rating: 4.8,
+    reviews: 312,
+    inStock: true,
+    description: "Military-grade drop protection with built-in MagSafe compatibility.",
+    specs: ["Military Grade Drop Protection", "MagSafe Compatible", "Wireless Charging Pass-through", "Raised Camera Lip"],
+  },
+  {
+    id: 2,
+    name: "Samsung S24 Ultra Clear Case",
+    category: "Cases",
+    price: 1200,
+    image: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400&h=400&fit=crop&auto=format",
+    badge: "new",
+    rating: 4.6,
+    reviews: 198,
+    inStock: true,
+    description: "Crystal clear polycarbonate back with anti-yellowing coating.",
+    specs: ["Anti-Yellow Coating", "Scratch Resistant", "Exact Fit", "Thin Profile 0.8mm"],
+  },
+  {
+    id: 3,
+    name: "65W GaN Fast Charger",
+    category: "Chargers",
+    price: 2800,
+    originalPrice: 3500,
+    image: "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400&h=400&fit=crop&auto=format",
+    badge: "hot",
+    rating: 4.9,
+    reviews: 521,
+    inStock: true,
+    description: "Charge your phone from 0 to 80% in just 35 minutes.",
+    specs: ["65W Power Delivery", "GaN Technology", "USB-C + USB-A", "Universal Compatibility", "Foldable Plug"],
+  },
+  {
+    id: 4,
+    name: "15W Wireless Charging Pad",
+    category: "Chargers",
+    price: 1650,
+    image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop&auto=format",
+    badge: "new",
+    rating: 4.5,
+    reviews: 145,
+    inStock: true,
+    description: "Qi2 certified wireless charging pad with intelligent temperature control.",
+    specs: ["15W Max Output", "Qi2 Certified", "LED Indicator", "Anti-Slip Surface", "Foreign Object Detection"],
+  },
+  {
+    id: 5,
+    name: "Galaxy Buds Pro Max TWS",
+    category: "Earphones",
+    price: 6500,
+    originalPrice: 8000,
+    image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop&auto=format",
+    badge: "sale",
+    rating: 4.7,
+    reviews: 856,
+    inStock: true,
+    description: "Active noise cancellation with 30-hour total battery life.",
+    specs: ["ANC Active Noise Cancellation", "30Hr Battery (6+24)", "IPX5 Water Resistant", "Hi-Res Audio", "Touch Controls"],
+  },
+  {
+    id: 6,
+    name: "Neckband Pro Wireless",
+    category: "Earphones",
+    price: 1900,
+    image: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop&auto=format",
+    rating: 4.3,
+    reviews: 234,
+    inStock: true,
+    description: "12-hour battery neckband with magnetic earbuds and deep bass.",
+    specs: ["12Hr Battery", "Magnetic Earbuds", "CVC 8.0 Noise Cancellation", "Magnetic Charging", "120ms Low Latency"],
+  },
+  {
+    id: 7,
+    name: "Tempered Glass 9H iPhone 15",
+    category: "Screen Protectors",
+    price: 450,
+    originalPrice: 700,
+    image: "https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=400&h=400&fit=crop&auto=format",
+    badge: "sale",
+    rating: 4.4,
+    reviews: 672,
+    inStock: true,
+    description: "9H hardness tempered glass with oleophobic coating. Pack of 2.",
+    specs: ["9H Hardness", "0.33mm Thickness", "Oleophobic Coating", "Pack of 2", "Easy Install Kit"],
+  },
+  {
+    id: 8,
+    name: "Privacy Screen Protector",
+    category: "Screen Protectors",
+    price: 850,
+    image: "https://images.unsplash.com/photo-1616763355548-1b606f439f86?w=400&h=400&fit=crop&auto=format",
+    badge: "new",
+    rating: 4.2,
+    reviews: 89,
+    inStock: true,
+    description: "180° privacy filter keeps your screen hidden from side viewers.",
+    specs: ["180° Privacy Angle", "9H Hardness", "Anti-Spy Filter", "Anti-Blue Light", "Touch Sensitive"],
+  },
+  {
+    id: 9,
+    name: "Braided USB-C to C Cable 2m",
+    category: "Cables",
+    price: 750,
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop&auto=format",
+    rating: 4.6,
+    reviews: 445,
+    inStock: true,
+    description: "240W rated braided nylon cable with 10Gbps data transfer.",
+    specs: ["240W Power Delivery", "10Gbps Data Transfer", "Braided Nylon", "2 Meter Length", "USB 3.2 Gen 2"],
+  },
+  {
+    id: 10,
+    name: "Lightning to USB-C Cable",
+    category: "Cables",
+    price: 650,
+    originalPrice: 900,
+    image: "https://images.unsplash.com/photo-1544866092-1677b432d2bc?w=400&h=400&fit=crop&auto=format",
+    badge: "sale",
+    rating: 4.5,
+    reviews: 321,
+    inStock: true,
+    description: "MFi certified Lightning to USB-C with fast charging support.",
+    specs: ["MFi Certified", "27W Fast Charging", "1.2 Meter Length", "Tangle-Free Design", "Compatible All iPhones"],
+  },
+  {
+    id: 11,
+    name: "20000mAh Power Bank Pro",
+    category: "Power Banks",
+    price: 4200,
+    originalPrice: 5500,
+    image: "https://images.unsplash.com/photo-1609592424892-33c9d5c3e7b5?w=400&h=400&fit=crop&auto=format",
+    badge: "hot",
+    rating: 4.8,
+    reviews: 734,
+    inStock: true,
+    description: "65W fast charge power bank — charge laptops, tablets, and phones.",
+    specs: ["20000mAh Capacity", "65W Fast Charging", "2x USB-C + 1x USB-A", "LED Display", "Charges Laptops"],
+  },
+  {
+    id: 12,
+    name: "10000mAh Slim Power Bank",
+    category: "Power Banks",
+    price: 2100,
+    image: "https://images.unsplash.com/photo-1605991878101-e36f1f45aa7e?w=400&h=400&fit=crop&auto=format",
+    badge: "new",
+    rating: 4.4,
+    reviews: 267,
+    inStock: true,
+    description: "Ultra-slim 12mm profile power bank with dual-port fast charging.",
+    specs: ["10000mAh Capacity", "22.5W Fast Charging", "Dual USB-C Ports", "12mm Ultra-Slim", "LED Indicator"],
+  },
+  {
+    id: 13,
+    name: "Phone Ring Holder Stand",
+    category: "Accessories",
+    price: 350,
+    image: "https://images.unsplash.com/photo-1512446816042-444d641267d4?w=400&h=400&fit=crop&auto=format",
+    rating: 4.1,
+    reviews: 156,
+    inStock: true,
+    description: "360° rotating ring holder that doubles as a kickstand.",
+    specs: ["360° Rotation", "Kickstand Function", "Universal Compatibility", "3M Adhesive", "Works with Most Cases"],
+  },
+  {
+    id: 14,
+    name: "Portable Bluetooth Speaker",
+    category: "Accessories",
+    price: 3800,
+    originalPrice: 4500,
+    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&h=400&fit=crop&auto=format",
+    badge: "sale",
+    rating: 4.6,
+    reviews: 412,
+    inStock: true,
+    description: "IPX7 waterproof speaker with 360° immersive sound and 24hr battery.",
+    specs: ["IPX7 Waterproof", "24Hr Battery", "360° Sound", "Stereo Pair Ready", "USB-C Charging"],
+  },
+  {
+    id: 15,
+    name: "Car Phone Mount Magsafe",
+    category: "Accessories",
+    price: 1100,
+    image: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=400&h=400&fit=crop&auto=format",
+    badge: "new",
+    rating: 4.7,
+    reviews: 198,
+    inStock: true,
+    description: "Magnetic car mount compatible with MagSafe and all phones.",
+    specs: ["MagSafe Compatible", "One-Hand Operation", "Air Vent + Dashboard", "360° Adjustable", "Universal Fit"],
+  },
+  {
+    id: 16,
+    name: "PopSocket Grip & Stand",
+    category: "Accessories",
+    price: 580,
+    image: "https://images.unsplash.com/photo-1598532163257-ae3c6b2524b6?w=400&h=400&fit=crop&auto=format",
+    rating: 4.3,
+    reviews: 523,
+    inStock: true,
+    description: "Collapsible grip and stand — use as a handle, kickstand, or earbud holder.",
+    specs: ["Collapsible Design", "Universal Adhesive", "Kickstand Mode", "Earbud Holder", "Wireless Charge Compatible"],
+  },
+];
+
+const CATEGORIES = ["All", "Cases", "Chargers", "Earphones", "Screen Protectors", "Cables", "Power Banks", "Accessories"];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatPKR(amount: number): string {
+  return "Rs. " + amount.toLocaleString("en-PK");
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <svg key={star} className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M6 1L7.545 4.09L11 4.545L8.5 6.98L9.09 10.42L6 8.795L2.91 10.42L3.5 6.98L1 4.545L4.455 4.09L6 1Z"
+            fill={star <= Math.round(rating) ? "#f59e0b" : "none"}
+            stroke={star <= Math.round(rating) ? "#f59e0b" : "#4b5563"}
+            strokeWidth="0.8"
+          />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+// ─── Product Card ─────────────────────────────────────────────────────────────
+function ProductCard({
+  product,
+  onAddToCart,
+  onViewDetail,
+}: {
+  product: Product;
+  onAddToCart: (p: Product) => void;
+  onViewDetail: (p: Product) => void;
+}) {
+  const [added, setAdded] = useState(false);
+
+  function handleAdd() {
+    onAddToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  }
+
+  return (
+    <div
+      className="card-hover rounded-xl border overflow-hidden cursor-pointer"
+      style={{ background: "#0f1117", borderColor: "rgba(255,255,255,0.07)" }}
+    >
+      <div className="relative overflow-hidden" style={{ aspectRatio: "1/1" }} onClick={() => onViewDetail(product)}>
+        <img
+          src={product.image}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          style={{ backgroundColor: "#141724" }}
+        />
+        {product.badge && (
+          <div className="absolute top-3 left-3">
+            <span className={product.badge === "sale" ? "badge-sale" : "badge-new"}>
+              {product.badge === "hot" ? "🔥 HOT" : product.badge.toUpperCase()}
+            </span>
+          </div>
+        )}
+        {!product.inStock && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(7,8,15,0.75)" }}>
+            <span className="mono text-xs tracking-widest" style={{ color: "#6b7599" }}>OUT OF STOCK</span>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4">
+        <p className="mono text-xs mb-1" style={{ color: "#00d4ff", opacity: 0.7, letterSpacing: "0.08em" }}>
+          {product.category.toUpperCase()}
+        </p>
+        <h3
+          className="font-semibold text-sm leading-snug mb-2 line-clamp-2 cursor-pointer hover:text-cyan-300 transition-colors"
+          style={{ fontFamily: "Outfit, sans-serif", color: "#d4d8e8" }}
+          onClick={() => onViewDetail(product)}
+        >
+          {product.name}
+        </h3>
+        <div className="flex items-center gap-2 mb-3">
+          <StarRating rating={product.rating} />
+          <span className="mono text-xs" style={{ color: "#6b7599" }}>({product.reviews})</span>
+        </div>
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="price-tag text-lg font-medium" style={{ color: "#00d4ff" }}>
+              {formatPKR(product.price)}
+            </div>
+            {product.originalPrice && (
+              <div className="price-tag text-xs line-through" style={{ color: "#6b7599" }}>
+                {formatPKR(product.originalPrice)}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={!product.inStock}
+            className="btn-primary rounded-lg px-3 py-2 text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {added ? (
+              <><svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z" /></svg>ADDED</>
+            ) : (
+              <><svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2.75A.75.75 0 01.75 2h1.5a.75.75 0 01.733.589L3.37 4H14.5a.75.75 0 01.732.912l-1.5 7A.75.75 0 0113 12.5H5a.75.75 0 01-.733-.589L2.63 3.5H.75A.75.75 0 010 2.75zM3.662 5.5l1.179 5.5H12.5l1.179-5.5H3.662z" /><path d="M5.5 14.5a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5zM11.5 14.5a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5z" /></svg>ADD</>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Cart Sidebar ─────────────────────────────────────────────────────────────
+function CartSidebar({ cart, open, onClose, onUpdateQty, onRemove, onCheckout }: {
+  cart: CartItem[]; open: boolean; onClose: () => void;
+  onUpdateQty: (id: number, qty: number) => void;
+  onRemove: (id: number) => void; onCheckout: () => void;
+}) {
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-40" style={{ background: "rgba(7,8,15,0.6)", backdropFilter: "blur(4px)" }} onClick={onClose} />
+      )}
+      <div
+        className="fixed top-0 right-0 h-full z-50 flex flex-col transition-transform duration-300"
+        style={{ width: "min(400px, 100vw)", background: "#0f1117", borderLeft: "1px solid rgba(255,255,255,0.07)", transform: open ? "translateX(0)" : "translateX(100%)" }}
+      >
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <div>
+            <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 22, fontWeight: 700, color: "#e8eaf0" }}>YOUR CART</h2>
+            <p className="mono text-xs" style={{ color: "#6b7599" }}>{itemCount} item{itemCount !== 1 ? "s" : ""}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2" style={{ background: "#141724", color: "#6b7599" }}>
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full" style={{ color: "#6b7599" }}>
+              <svg className="w-16 h-16 mb-4 opacity-30" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M8 8h4l8 32h24l6-20H20" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="26" cy="50" r="3" /><circle cx="42" cy="50" r="3" />
+              </svg>
+              <p style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 18, fontWeight: 600 }}>Cart is empty</p>
+              <p className="text-sm mt-1" style={{ color: "#4b5563" }}>Add some accessories!</p>
+            </div>
+          ) : (
+            cart.map((item) => (
+              <div key={item.id} className="flex gap-3 rounded-lg p-3" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" style={{ backgroundColor: "#1a1d2e" }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium leading-snug mb-1 truncate" style={{ color: "#d4d8e8" }}>{item.name}</p>
+                  <p className="price-tag text-sm font-medium" style={{ color: "#00d4ff" }}>{formatPKR(item.price)}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <button className="w-7 h-7 flex items-center justify-center" style={{ background: "#1a1d2e", color: "#a0a8c0" }} onClick={() => onUpdateQty(item.id, item.quantity - 1)}>−</button>
+                      <span className="w-8 text-center mono text-sm" style={{ color: "#e8eaf0" }}>{item.quantity}</span>
+                      <button className="w-7 h-7 flex items-center justify-center" style={{ background: "#1a1d2e", color: "#a0a8c0" }} onClick={() => onUpdateQty(item.id, item.quantity + 1)}>+</button>
+                    </div>
+                    <button className="text-xs ml-auto" style={{ color: "#ef4444", opacity: 0.7 }} onClick={() => onRemove(item.id)}>Remove</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <div className="p-5 border-t" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm" style={{ color: "#6b7599" }}>Subtotal</span>
+              <span className="price-tag text-sm" style={{ color: "#a0a8c0" }}>{formatPKR(total)}</span>
+            </div>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm" style={{ color: "#6b7599" }}>Delivery</span>
+              <span className="mono text-sm" style={{ color: "#22c55e" }}>FREE</span>
+            </div>
+            <div className="flex items-center justify-between py-3 mb-4 border-t border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: 16, color: "#e8eaf0" }}>TOTAL</span>
+              <span className="price-tag text-xl font-medium" style={{ color: "#00d4ff" }}>{formatPKR(total)}</span>
+            </div>
+            <button onClick={onCheckout} className="btn-primary w-full rounded-xl py-3.5 text-sm">PROCEED TO CHECKOUT</button>
+            <button onClick={onClose} className="w-full mt-3 py-2 text-sm rounded-xl" style={{ background: "#141724", color: "#6b7599", border: "1px solid rgba(255,255,255,0.07)" }}>Continue Shopping</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Product Detail Modal ─────────────────────────────────────────────────────
+function ProductModal({ product, onClose, onAddToCart }: {
+  product: Product | null; onClose: () => void; onAddToCart: (p: Product) => void;
+}) {
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+
+  useEffect(() => { setQty(1); setAdded(false); }, [product]);
+
+  if (!product) return null;
+
+  function handleAdd() {
+    for (let i = 0; i < qty; i++) onAddToCart(product!);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  }
+
+  const discount = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,8,15,0.85)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+      <div className="relative rounded-2xl overflow-hidden fade-in w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: "#0f1117", border: "1px solid rgba(255,255,255,0.1)" }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 z-10 rounded-full p-2" style={{ background: "#141724", color: "#6b7599" }}>
+          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+        </button>
+        <div className="grid md:grid-cols-2">
+          <div className="relative" style={{ aspectRatio: "1/1", backgroundColor: "#141724", minHeight: 240 }}>
+            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+            {product.badge && (
+              <div className="absolute top-3 left-3">
+                <span className={product.badge === "sale" ? "badge-sale" : "badge-new"}>{product.badge.toUpperCase()}</span>
+              </div>
+            )}
+            {discount && (
+              <div className="absolute bottom-3 left-3 rounded-lg px-3 py-1" style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                <span className="mono text-xs font-medium" style={{ color: "#ef4444" }}>{discount}% OFF</span>
+              </div>
+            )}
+          </div>
+          <div className="p-6 flex flex-col justify-between">
+            <div>
+              <p className="mono text-xs mb-2" style={{ color: "#00d4ff", opacity: 0.7, letterSpacing: "0.1em" }}>{product.category.toUpperCase()}</p>
+              <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 24, fontWeight: 700, color: "#e8eaf0", lineHeight: 1.2 }}>{product.name}</h2>
+              <div className="flex items-center gap-3 mt-3 mb-4">
+                <StarRating rating={product.rating} />
+                <span className="mono text-xs" style={{ color: "#6b7599" }}>{product.rating} ({product.reviews} reviews)</span>
+              </div>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: "#6b7599" }}>{product.description}</p>
+              <div className="space-y-2 mb-4">
+                {product.specs.map((spec, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#00d4ff" }} />
+                    <span className="text-xs" style={{ color: "#a0a8c0" }}>{spec}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-end gap-3 mb-4">
+                <span className="price-tag text-3xl font-medium" style={{ color: "#00d4ff" }}>{formatPKR(product.price)}</span>
+                {product.originalPrice && (
+                  <span className="price-tag text-base line-through mb-0.5" style={{ color: "#4b5563" }}>{formatPKR(product.originalPrice)}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", background: "#141724" }}>
+                  <button className="w-10 h-10 flex items-center justify-center text-lg" style={{ color: "#a0a8c0" }} onClick={() => setQty((q) => Math.max(1, q - 1))}>−</button>
+                  <span className="w-10 text-center mono text-base" style={{ color: "#e8eaf0" }}>{qty}</span>
+                  <button className="w-10 h-10 flex items-center justify-center text-lg" style={{ color: "#a0a8c0" }} onClick={() => setQty((q) => q + 1)}>+</button>
+                </div>
+                <button onClick={handleAdd} disabled={!product.inStock} className="btn-primary flex-1 rounded-xl py-2.5 text-sm">
+                  {added ? "✓ ADDED TO CART" : "ADD TO CART"}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 mt-4 rounded-lg p-3" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="#22c55e" strokeWidth="1.5"><path d="M8 1L10 5h5l-4 3 1.5 5L8 11l-4.5 3L5 9 1 6h5L8 1z" strokeLinejoin="round" /></svg>
+                <span className="text-xs" style={{ color: "#22c55e" }}>Free delivery across Pakistan · Cash on Delivery Available</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Panel ──────────────────────────────────────────────────────────────
+function AdminPanel({ products, onSave, onClose }: {
+  products: Product[]; onSave: (products: Product[]) => void; onClose: () => void;
+}) {
+  const [localProducts, setLocalProducts] = useState<Product[]>(products.map((p) => ({ ...p })));
+  const [search, setSearch] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const filtered = localProducts.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  function handlePriceChange(id: number, field: "price" | "originalPrice", value: string) {
+    const num = parseInt(value.replace(/[^0-9]/g, ""), 10);
+    setLocalProducts((prev) => prev.map((p) => p.id === id ? { ...p, [field]: isNaN(num) ? 0 : num } : p));
+  }
+
+  function handleSave() {
+    onSave(localProducts);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,8,15,0.9)", backdropFilter: "blur(12px)" }}>
+      <div className="rounded-2xl overflow-hidden fade-in w-full max-w-3xl max-h-[90vh] flex flex-col" style={{ background: "#0f1117", border: "1px solid rgba(0,212,255,0.2)", boxShadow: "0 0 60px rgba(0,212,255,0.08)" }}>
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full pulse-glow" style={{ background: "#00d4ff" }} />
+              <span className="mono text-xs" style={{ color: "#00d4ff", letterSpacing: "0.1em" }}>ADMIN ACCESS</span>
+            </div>
+            <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 24, fontWeight: 700, color: "#e8eaf0" }}>PRICE MANAGEMENT</h2>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2" style={{ background: "#141724", color: "#6b7599" }}>
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+          </button>
+        </div>
+        <div className="p-4 border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <input type="text" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full rounded-lg px-4 py-2.5 text-sm" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.08)", color: "#e8eaf0" }} />
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {filtered.map((product) => (
+            <div key={product.id} className="flex items-center gap-4 rounded-xl p-3" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" style={{ backgroundColor: "#1a1d2e" }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "#d4d8e8" }}>{product.name}</p>
+                <p className="mono text-xs" style={{ color: "#6b7599" }}>{product.category}</p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div>
+                  <label className="mono text-xs block mb-1" style={{ color: "#6b7599" }}>PRICE (PKR)</label>
+                  <input type="text" value={product.price} onChange={(e) => handlePriceChange(product.id, "price", e.target.value)} className="w-28 rounded-lg px-3 py-1.5 text-sm text-right mono" style={{ background: "#0f1117", border: "1px solid rgba(0,212,255,0.2)", color: "#00d4ff" }} />
+                </div>
+                <div>
+                  <label className="mono text-xs block mb-1" style={{ color: "#6b7599" }}>ORIG. (PKR)</label>
+                  <input type="text" value={product.originalPrice ?? ""} onChange={(e) => handlePriceChange(product.id, "originalPrice", e.target.value)} placeholder="—" className="w-28 rounded-lg px-3 py-1.5 text-sm text-right mono" style={{ background: "#0f1117", border: "1px solid rgba(255,255,255,0.06)", color: "#a0a8c0" }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between p-5 border-t gap-4" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <p className="text-xs" style={{ color: "#6b7599" }}>Changes are saved to browser storage and reflected immediately.</p>
+          <button onClick={handleSave} className="btn-primary rounded-xl px-6 py-2.5 text-sm flex-shrink-0">
+            {saved ? "✓ SAVED!" : "SAVE PRICES"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin Login Modal ────────────────────────────────────────────────────────
+function AdminLogin({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 100); }, []);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) { onSuccess(); }
+    else { setError(true); setPassword(""); setTimeout(() => setError(false), 2000); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,8,15,0.9)", backdropFilter: "blur(12px)" }} onClick={onClose}>
+      <div className="rounded-2xl fade-in w-full max-w-sm p-8" style={{ background: "#0f1117", border: "1px solid rgba(0,212,255,0.15)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15))", border: "1px solid rgba(0,212,255,0.2)" }}>
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="1.5">
+              <path d="M12 1a4 4 0 014 4v2h2a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V5a4 4 0 014-4z" strokeLinejoin="round" />
+              <circle cx="12" cy="14" r="2" fill="#00d4ff" stroke="none" />
+            </svg>
+          </div>
+          <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 24, fontWeight: 700, color: "#e8eaf0" }}>ADMIN ACCESS</h2>
+          <p className="text-sm mt-1" style={{ color: "#6b7599" }}>Enter your password to manage prices</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input ref={inputRef} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter admin password" className="w-full rounded-xl px-4 py-3 text-sm" style={{ background: "#141724", border: `1px solid ${error ? "#ef4444" : "rgba(255,255,255,0.08)"}`, color: "#e8eaf0", transition: "border-color 0.2s" }} />
+          {error && <p className="mono text-xs text-center" style={{ color: "#ef4444" }}>Incorrect password. Access denied.</p>}
+          <button type="submit" className="btn-primary w-full rounded-xl py-3 text-sm">UNLOCK PANEL</button>
+          <button type="button" onClick={onClose} className="w-full py-2.5 text-sm rounded-xl" style={{ color: "#6b7599" }}>Cancel</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Checkout Modal ───────────────────────────────────────────────────────────
+function CheckoutModal({ cart, onClose, onComplete }: {
+  cart: CartItem[]; onClose: () => void; onComplete: () => void;
+}) {
+  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "" });
+  const [method, setMethod] = useState<"cod" | "bank">("cod");
+  const [submitted, setSubmitted] = useState(false);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+    setTimeout(() => { onComplete(); }, 3000);
+  }
+
+  if (submitted) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,8,15,0.9)", backdropFilter: "blur(12px)" }}>
+        <div className="text-center fade-in">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(34,197,94,0.1)", border: "2px solid #22c55e" }}>
+            <svg className="w-12 h-12" viewBox="0 0 48 48" fill="none" stroke="#22c55e" strokeWidth="2.5"><path d="M10 24l10 10 18-18" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </div>
+          <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 32, fontWeight: 700, color: "#e8eaf0" }}>ORDER PLACED!</h2>
+          <p className="mt-2" style={{ color: "#6b7599" }}>Your order is confirmed. We'll contact you shortly.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(7,8,15,0.85)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+      <div className="rounded-2xl fade-in w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ background: "#0f1117", border: "1px solid rgba(255,255,255,0.1)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 22, fontWeight: 700, color: "#e8eaf0" }}>CHECKOUT</h2>
+          <button onClick={onClose} className="rounded-lg p-2" style={{ background: "#141724", color: "#6b7599" }}>
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {[
+            { label: "Full Name", key: "name", placeholder: "Muhammad Ahmed" },
+            { label: "Phone Number", key: "phone", placeholder: "03XX-XXXXXXX" },
+            { label: "Delivery Address", key: "address", placeholder: "House No. / Street / Area" },
+            { label: "City", key: "city", placeholder: "Karachi / Lahore / Islamabad..." },
+          ].map(({ label, key, placeholder }) => (
+            <div key={key}>
+              <label className="block text-xs mb-1.5 mono" style={{ color: "#6b7599", letterSpacing: "0.06em" }}>{label.toUpperCase()}</label>
+              <input type="text" placeholder={placeholder} required value={form[key as keyof typeof form]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))} className="w-full rounded-lg px-4 py-2.5 text-sm" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.08)", color: "#e8eaf0" }} />
+            </div>
+          ))}
+          <div>
+            <label className="block text-xs mb-2 mono" style={{ color: "#6b7599", letterSpacing: "0.06em" }}>PAYMENT METHOD</label>
+            <div className="grid grid-cols-2 gap-3">
+              {[{ value: "cod", label: "Cash on Delivery", icon: "💵" }, { value: "bank", label: "Bank Transfer", icon: "🏦" }].map((opt) => (
+                <button key={opt.value} type="button" onClick={() => setMethod(opt.value as "cod" | "bank")} className="p-3 rounded-xl text-sm text-left transition-all" style={{ background: method === opt.value ? "rgba(0,212,255,0.08)" : "#141724", border: `1px solid ${method === opt.value ? "rgba(0,212,255,0.35)" : "rgba(255,255,255,0.07)"}`, color: method === opt.value ? "#00d4ff" : "#a0a8c0" }}>
+                  <div className="text-lg mb-1">{opt.icon}</div>
+                  <div className="font-medium">{opt.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl p-4 space-y-2" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <p style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 14, fontWeight: 600, color: "#a0a8c0", letterSpacing: "0.05em" }}>ORDER SUMMARY</p>
+            {cart.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span style={{ color: "#6b7599" }}>{item.name} ×{item.quantity}</span>
+                <span className="price-tag" style={{ color: "#a0a8c0" }}>{formatPKR(item.price * item.quantity)}</span>
+              </div>
+            ))}
+            <div className="border-t pt-2 flex justify-between" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+              <span style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, color: "#e8eaf0" }}>TOTAL</span>
+              <span className="price-tag text-lg" style={{ color: "#00d4ff" }}>{formatPKR(total)}</span>
+            </div>
+          </div>
+          <button type="submit" className="btn-primary w-full rounded-xl py-3.5 text-sm mt-2">PLACE ORDER — {formatPKR(total)}</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem("mk_products");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Product[];
+        return INITIAL_PRODUCTS.map((p) => {
+          const saved_p = parsed.find((s) => s.id === p.id);
+          return saved_p ? { ...p, price: saved_p.price, originalPrice: saved_p.originalPrice } : p;
+        });
+      }
+    } catch (_) {}
+    return INITIAL_PRODUCTS;
+  });
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "rating">("default");
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  function addToCart(product: Product) {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) return prev.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    showNotification(`${product.name} added to cart!`);
+  }
+
+  function updateQty(id: number, qty: number) {
+    if (qty <= 0) setCart((prev) => prev.filter((item) => item.id !== id));
+    else setCart((prev) => prev.map((item) => (item.id === id ? { ...item, quantity: qty } : item)));
+  }
+
+  function removeFromCart(id: number) { setCart((prev) => prev.filter((item) => item.id !== id)); }
+
+  function showNotification(msg: string) { setNotification(msg); setTimeout(() => setNotification(null), 2500); }
+
+  function handleSavePrices(updated: Product[]) {
+    setProducts((prev) => prev.map((p) => { const u = updated.find((up) => up.id === p.id); return u ? { ...p, price: u.price, originalPrice: u.originalPrice } : p; }));
+    localStorage.setItem("mk_products", JSON.stringify(updated.map((p) => ({ id: p.id, price: p.price, originalPrice: p.originalPrice }))));
+    setCart((prev) => prev.map((item) => { const u = updated.find((up) => up.id === item.id); return u ? { ...item, price: u.price } : item; }));
+  }
+
+  let filtered = products.filter((p) => {
+    const matchCat = activeCategory === "All" || p.category === activeCategory;
+    const matchSearch = search === "" || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  if (sortBy === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
+  else if (sortBy === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
+  else if (sortBy === "rating") filtered = [...filtered].sort((a, b) => b.rating - a.rating);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#07080f" }}>
+      {/* Navbar */}
+      <nav className="sticky top-0 z-30 border-b" style={{ background: "rgba(7,8,15,0.9)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00d4ff22, #7c3aed22)", border: "1px solid rgba(0,212,255,0.3)" }}>
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="#00d4ff" strokeWidth="1.5"><rect x="4" y="2" width="12" height="16" rx="2" /><path d="M7 6h6M7 10h4" strokeLinecap="round" /><circle cx="10" cy="14" r="1" fill="#00d4ff" stroke="none" /></svg>
+              </div>
+              <div>
+                <h1 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 20, fontWeight: 700, color: "#e8eaf0", lineHeight: 1 }}>MOBILE<span style={{ color: "#00d4ff" }}>ZONE</span></h1>
+                <p className="mono text-xs" style={{ color: "#4b5563", letterSpacing: "0.08em" }}>ACCESSORIES</p>
+              </div>
+            </div>
+            <div className="hidden md:flex items-center gap-2 flex-1 max-w-md mx-6">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="#6b7599" strokeWidth="1.5"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" strokeLinecap="round" /></svg>
+                <input type="text" placeholder="Search accessories..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-xl text-sm" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.07)", color: "#e8eaf0" }} />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowAdminLogin(true)} className="hidden sm:flex items-center gap-1.5 text-xs rounded-lg px-3 py-2" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.07)", color: "#6b7599" }}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="1" width="8" height="12" rx="1.5" /><circle cx="7" cy="8" r="1.5" /><path d="M5 4.5h4" strokeLinecap="round" /></svg>
+                Admin
+              </button>
+              <button onClick={() => setCartOpen(true)} className="relative flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.07)", color: "#e8eaf0" }}>
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M1 2.5h2.5L5.5 12h9l2-7H6" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="15" r="1.5" fill="currentColor" stroke="none" /><circle cx="14" cy="15" r="1.5" fill="currentColor" stroke="none" /></svg>
+                <span className="hidden sm:block text-sm">Cart</span>
+                {totalCartItems > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center mono text-xs font-bold" style={{ background: "#00d4ff", color: "#07080f" }}>{totalCartItems}</span>
+                )}
+              </button>
+            </div>
+          </div>
+          <div className="md:hidden pb-3">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="#6b7599" strokeWidth="1.5"><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5l3 3" strokeLinecap="round" /></svg>
+              <input type="text" placeholder="Search accessories..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2 rounded-xl text-sm" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.07)", color: "#e8eaf0" }} />
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <div className="grid-bg relative overflow-hidden" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 80% 60% at 50% -20%, rgba(0,212,255,0.08) 0%, transparent 60%), radial-gradient(ellipse 40% 40% at 80% 50%, rgba(124,58,237,0.06) 0%, transparent 50%)" }} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6" style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)" }}>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#00d4ff" }} />
+              <span className="mono text-xs" style={{ color: "#00d4ff", letterSpacing: "0.08em" }}>FREE DELIVERY ACROSS PAKISTAN</span>
+            </div>
+            <h1 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 700, color: "#e8eaf0", lineHeight: 1.05 }}>
+              PREMIUM MOBILE<br /><span style={{ color: "#00d4ff" }}>ACCESSORIES</span>
+            </h1>
+            <p className="mt-4 text-base leading-relaxed" style={{ color: "#6b7599", maxWidth: 480 }}>
+              Cases, chargers, earphones, cables & more — everything your phone needs, shipped fast anywhere in Pakistan.
+            </p>
+            <div className="flex items-center gap-4 mt-8 flex-wrap">
+              <button onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })} className="btn-primary rounded-xl px-6 py-3 text-sm">SHOP NOW</button>
+              <div className="flex items-center gap-2 text-sm" style={{ color: "#6b7599" }}><span className="mono" style={{ color: "#22c55e" }}>✓</span>Cash on Delivery</div>
+              <div className="flex items-center gap-2 text-sm" style={{ color: "#6b7599" }}><span className="mono" style={{ color: "#22c55e" }}>✓</span>Original Products</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="sticky z-20 border-b overflow-x-auto" style={{ top: 64, background: "rgba(7,8,15,0.95)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center gap-1 py-3 min-w-max">
+            {CATEGORIES.map((cat) => (
+              <button key={cat} onClick={() => setActiveCategory(cat)} className="px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap" style={{ background: activeCategory === cat ? "rgba(0,212,255,0.12)" : "transparent", color: activeCategory === cat ? "#00d4ff" : "#6b7599", border: activeCategory === cat ? "1px solid rgba(0,212,255,0.25)" : "1px solid transparent", fontFamily: "Rajdhani, sans-serif", fontWeight: 600, letterSpacing: "0.04em" }}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Products */}
+      <div id="products" className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+          <div>
+            <h2 style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 22, fontWeight: 700, color: "#e8eaf0" }}>
+              {activeCategory === "All" ? "ALL PRODUCTS" : activeCategory.toUpperCase()}
+            </h2>
+            <p className="mono text-xs mt-0.5" style={{ color: "#6b7599" }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""} found</p>
+          </div>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="rounded-lg px-3 py-2 text-sm" style={{ background: "#141724", border: "1px solid rgba(255,255,255,0.07)", color: "#a0a8c0", fontFamily: "Outfit, sans-serif" }}>
+            <option value="default">Default</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
+        </div>
+        {filtered.length === 0 ? (
+          <div className="text-center py-20" style={{ color: "#6b7599" }}>
+            <p style={{ fontFamily: "Rajdhani, sans-serif", fontSize: 20 }}>No products found</p>
+            <p className="text-sm mt-1">Try a different search or category</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map((product) => (
+              <ProductCard key={product.id} product={product} onAddToCart={addToCart} onViewDetail={setSelectedProduct} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t mt-12" style={{ background: "#0a0b12", borderColor: "rgba(255,255,255,0.05)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+          <div className="grid sm:grid-cols-3 gap-8 mb-8">
+            <div>
+              <h3 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 700, fontSize: 16, color: "#e8eaf0", marginBottom: 12 }}>MOBILE<span style={{ color: "#00d4ff" }}>ZONE</span></h3>
+              <p className="text-sm leading-relaxed" style={{ color: "#4b5563" }}>Pakistan's trusted online store for premium mobile accessories. Authentic products, fast delivery, and cash on delivery available nationwide.</p>
+            </div>
+            <div>
+              <h3 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: 14, color: "#a0a8c0", letterSpacing: "0.08em", marginBottom: 12 }}>SHOP</h3>
+              <div className="space-y-2">
+                {CATEGORIES.slice(1).map((cat) => (
+                  <button key={cat} onClick={() => { setActiveCategory(cat); document.getElementById("products")?.scrollIntoView({ behavior: "smooth" }); }} className="block text-sm transition-colors hover:text-cyan-300" style={{ color: "#4b5563" }}>{cat}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 style={{ fontFamily: "Rajdhani, sans-serif", fontWeight: 600, fontSize: 14, color: "#a0a8c0", letterSpacing: "0.08em", marginBottom: 12 }}>CONTACT</h3>
+              <div className="space-y-2 text-sm" style={{ color: "#4b5563" }}>
+                <p>📞 0300-XXXXXXX</p>
+                <p>📧 info@mobilezone.pk</p>
+                <p>🕐 Mon–Sat: 9AM – 9PM</p>
+                <p>🚚 Nationwide Delivery</p>
+              </div>
+            </div>
+          </div>
+          <div className="pt-6 border-t flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+            <p className="mono text-xs" style={{ color: "#2d3748" }}>© 2025 MobileZone Pakistan. All rights reserved.</p>
+            <button onClick={() => setShowAdminLogin(true)} className="mono text-xs transition-colors hover:text-cyan-500" style={{ color: "#1e2535" }}>Admin Portal</button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Toast */}
+      {notification && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl px-5 py-3 flex items-center gap-2 fade-in" style={{ background: "#0f1117", border: "1px solid rgba(0,212,255,0.3)", boxShadow: "0 8px 32px rgba(0,212,255,0.15)", color: "#e8eaf0", whiteSpace: "nowrap" }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: "#00d4ff" }} />
+          <span className="text-sm">{notification}</span>
+        </div>
+      )}
+
+      {/* Overlays */}
+      <CartSidebar cart={cart} open={cartOpen} onClose={() => setCartOpen(false)} onUpdateQty={updateQty} onRemove={removeFromCart} onCheckout={() => { setCartOpen(false); setShowCheckout(true); }} />
+      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
+      {showAdminLogin && !showAdmin && <AdminLogin onSuccess={() => { setShowAdminLogin(false); setShowAdmin(true); }} onClose={() => setShowAdminLogin(false)} />}
+      {showAdmin && <AdminPanel products={products} onSave={handleSavePrices} onClose={() => setShowAdmin(false)} />}
+      {showCheckout && <CheckoutModal cart={cart} onClose={() => setShowCheckout(false)} onComplete={() => { setShowCheckout(false); setCart([]); showNotification("Order placed successfully!"); }} />}
+    </div>
+  );
+}
+
+
+
